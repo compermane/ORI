@@ -25,15 +25,21 @@ void arvB_destroi(ArvB* raiz)
 {
     // Se a raiz estiver nula, retorna
     if(!(*raiz))
+    {
         return;
-
+    }
     // Caso contrario, destroi recursivamente cada filho da
     // raiz
     for(int i = 0; i < ORDEM - 1 && (*raiz)->filhos[i] != NULL; i++)
+    {
         arvB_destroi((*raiz)->filhos[i]);
+    }
 
     // Aqui, a raiz ja nao possui mais filhos
+    raiz = NULL;
     free(raiz);
+
+    printf("BRUH");
 }
 
 // Busca um valor em uma arvore B, retornando 1 (TRUE)
@@ -87,70 +93,83 @@ int arvB_qtd_chaves(ArvB* raiz)
 
 }
 
-int arvB_insere(ArvB *raiz, int valor)
-{
-    int i = 0;
+int arvB_insere(ArvB *raiz, int valor) {
+  int i = 0;
+  int t;
 
-    if(!(*raiz))
+  if (!(*raiz)) // se nao for raiz, cria uma nova
+  {
+    raiz = arvB_cria();
+    (*raiz)->chaves[0] = valor;
+    (*raiz)->nChaves = (*raiz)->nChaves + 1;
+
+    return TRUE;
+  } else // se a raiz ja existe:
+  {
+    if ((*raiz)->ehFolha == FALSE) // só insere folha
     {
-        raiz = arvB_cria();
-        (*raiz)->chaves[0] = valor;
+      i = 0;
+      while (valor < (*raiz)->chaves[i] &&
+             i < ORDEM - 1) // acha a pos a ser inserida
+      {
+        if (valor == (*raiz)->chaves[i]) {
+          return FALSE;
+        }
+        i++;
+      }
+      arvB_insere(((*raiz)->filhos[i]), valor);
+    } else {
+      if ((*raiz)->nChaves < ORDEM - 1) // sem overflow
+      {
 
-        return TRUE;
-    }
-
-    // Caso em que ainda ha espaço no noh para a insercao
-    if((*raiz)->nChaves < ORDEM - 1)
-    {
-        // Determinacao da posicao da chave a ser inserida no noh
-        while(valor > (*raiz)->chaves[i])
-            i++;
-
-        for(int j = ORDEM - 1; j > i; j--)
-            (*raiz)->chaves[j] = (*raiz)->chaves[j - 1];
+        for(int j = ORDEM - 2; j > i; j--)
+        {
+            (*raiz)->chaves[j] = (*raiz)->chaves[j-1];
+        }
 
         (*raiz)->chaves[i] = valor;
+        (*raiz)->nChaves = (*raiz)->nChaves + 1;
+
         return TRUE;
+      }
     }
-    // Caso em que nao ha mais espaço no noh a ser inserido o elemento
-    else
-    {
-        int medio = (ORDEM - 1) / 2;
-        // Passo 1: criacao de uma nova raiz
-        ArvB* novaRaiz = arvB_cria();
-        ArvB* FilhoEsq = arvB_cria();
-        ArvB* FilhoDir = arvB_cria();
-
-        (*novaRaiz)->filhos[0] = FilhoEsq;
-        (*novaRaiz)->filhos[1] = FilhoDir;
-
-        // Tratamento da parte esquerda do split
-        for(int j = 0; j <= medio; j++)
-            (*novaRaiz)->filhos[0]->chaves[j] = (*raiz)->chaves[j];
-
-        // Tratamento da parte direita do split
-        for(int j = medio + 1; j < ORDEM - 1; j++)
-            (*novaRaiz)->filhos[1]->chaves[j] = (*raiz)->chaves[j];
-        
-        
-    }
+  }
 }
 
-// int main()
-// {
-//     printf("Trabalho de ORI\n");
-//     ArvB* p = arvB_cria();
 
-//     for(int i = 0; i < ORDEM - 1; i++)
-//     {
-//         arvB_insere(p, i);
-//     }
+int main()
+{
+    printf("Trabalho de ORI\n");
+    ArvB* p = arvB_cria();
+    ArvB* q = arvB_cria();
 
-//     for(int i = 0; i < ORDEM - 1; i++)
-//     {
-//         printf("%d ", (*p)->chaves[i]);
-//     }
+    for(int i = 0; i < ORDEM - 1; i++)
+    {
+        arvB_insere(q, i);
+    }
 
-//     free(p);
-//     return 0;
-// }
+    for(int i = 0; i < ORDEM - 1; i++)
+        arvB_insere(p, i + 7);
+
+    (*p)->filhos[0] = q;
+
+    for(int i = 0; i < ORDEM - 1; i++)
+    {
+        printf("%d ", (*p)->chaves[i]);
+    }
+
+    printf("\n");
+
+    for(int i = 0; i < ORDEM - 1; i++)
+    {
+        printf("%d ", (*q)->chaves[i]);
+    }
+
+    printf("QTD CHAVES: %d\n", arvB_qtd_chaves(p));
+    printf("QTD NOHS: %d", arvB_qtd_nos(p));
+
+    (arvB_busca(p, 90)) ? printf("ACHADO\n") : printf("NAO ACHADO\n");
+    (arvB_busca(p, 3)) ? printf("ACHADO\n") : printf("NAO ACHADO\n");
+    arvB_destroi(p);
+    return 0;
+}
