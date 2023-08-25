@@ -2,26 +2,45 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int arvB_insere_nao_cheia(ArvB* raiz, int valor);
-void arvB_split(ArvB* pai, int indice, ArvB* filho);
+// Funcoes auxiliares
+ArvB arvB_cria_node();
+void arvB_insere_nao_cheia(ArvB raiz, int valor);
+void arvB_split(ArvB pai, int indice);
 
-// Cria um ponteiro para um noh de arvore B
+// Cria um node de BTree
+ArvB arvB_cria_node()
+{
+    ArvB nova = (ArvB) malloc(sizeof(struct NO));
+
+    if(nova == NULL)
+    {
+        printf("Erro na alocacao de memoria");
+        exit(EXIT_FAILURE);
+    }
+
+    nova->nChaves = 0;
+    nova->ehFolha = TRUE;
+
+    for(int i = 0; i < ORDEM; i++)
+        nova->filhos[i] = NULL;
+
+    return nova;
+}
+
+// Cria um ponteiro para uma arvore B
 ArvB* arvB_cria()
 {
-    printf("bruh5\n");
-    // Aloca um espaco na memoria
-    ArvB* nova;
-    nova = (ArvB*) malloc(sizeof(NO));
+    ArvB* nova = (ArvB*) malloc(sizeof(ArvB));
 
-    printf("BRUH6\n");
-    // Faz o set de valores iniciais
-    (*nova)->nChaves = 0;
-    (*nova)->ehFolha = TRUE;
+    if(nova == NULL)
+    {
+        printf("Erro na alocacao de memoria");
+        exit(EXIT_FAILURE);
+    }
 
-    // Inicialmente, cada filho do novo noh nao possui
-    // referencia para seus filhos
-    for(int i = 0; i < ORDEM - 1; i++)
-        (*nova)->filhos[i] = NULL;
+    // Designa um noh para a raiz
+    ArvB novoNode = arvB_cria_node();
+    *nova = novoNode;
 
     return nova;
 }
@@ -29,178 +48,213 @@ ArvB* arvB_cria()
 // Funcao que deleta uma Arvore B dada a sua raiz
 void arvB_destroi(ArvB* raiz)
 {
-    // Se a raiz estiver nula, retorna
-    if(!(*raiz))
+    // Se a raiz já estiver vazia, retorna
+    if(*raiz == NULL)
         return;
-
-    // Caso contrario, destroi recursivamente cada filho da
-    // raiz
-    for(int i = 0; i < ORDEM - 1 && (*raiz)->filhos[i] != NULL; i++)
-    {
-        printf("i: %d\n", i);
-        arvB_destroi((*raiz)->filhos[i]);
-        printf("BRUH");
-    }
+    
+    // Caso contrario, destroi recursivamente cada filho
+    for(int i = 0; i <= (*raiz)->nChaves; i++)
+        arvB_destroi(&(*raiz)->filhos[i]);
 
     // Aqui, a raiz ja nao possui mais filhos
-    free(raiz);
-}
-
-// Busca um valor em uma arvore B, retornando 1 (TRUE)
-// caso seja encontrado e 0 (FALSE) caso contrario
-int arvB_busca(ArvB* raiz, int valor)
-{
-    // Se o noh buscado for folha, busca em seu vetor de chaves
-    if((*raiz)->ehFolha)
-    {
-        for(int i = 0; i < (*raiz)->nChaves; i++)
-            if((*raiz)->chaves[i] == valor)
-                return TRUE;
-
-        return FALSE;
-    }
-
-    int i = 0;
-    while(i < ORDEM - 1 && i < (*raiz)->nChaves)
-    {
-        if((*raiz)->chaves[i] > valor)
-            i++;
-        else if((*raiz)->chaves[i] == valor)
-            return TRUE;
-        else
-            break;
-    }
-
-    return arvB_busca((*raiz)->filhos[i], valor);
-}
-
-// Retorna a quantidade de nohs de uma arvore B, dada
-// a referencia para a raiz
-int arvB_qtd_nos(ArvB* raiz)
-{
-    if((*raiz)->ehFolha)
-        return 1;
-
-    for(int i = 0; i < ORDEM || (*raiz)->filhos[i] == NULL; i++)
-        return 1 + arvB_qtd_nos((*raiz)->filhos[i]);
+    free(*raiz);
+    *raiz = NULL;
 }
 
 // Retorna a quantidade de chaves inseridas em uma arvore B,
 // dada a referencia para a raiz
 int arvB_qtd_chaves(ArvB* raiz)
 {
+    // Caso em que a raiz nao existe
+    if(!(*raiz))
+        return 0;
+
+    // Se o noh da raiz for folha, retorna sua quantidade de chaves
     if((*raiz)->ehFolha)
         return (*raiz)->nChaves;
 
-    for(int i = 0; i < ORDEM || (*raiz)->filhos[i] == NULL; i++)
-        return (*raiz)->nChaves + arvB_qtd_chaves((*raiz)->filhos[i]);
+    int aux = 0;
+    ArvB* auxB = arvB_cria();
 
+    // Enquanto o noh analisado tiver filhos, chama recursivamente a função
+    for(int i = 0; i <= (*raiz)->nChaves; i++)
+    {
+        *auxB = (*raiz)->filhos[i];
+        aux = aux + arvB_qtd_chaves(auxB);
+    }
+
+    return aux + (*raiz)->nChaves;
 }
 
+// Retorna a quantidade de nohs de uma arvore B, dada
+// a referencia para a raiz
+int arvB_qtd_nos(ArvB* raiz)
+{
+    // Caso em que a arvore nao existe
+    if((*raiz) == NULL)
+        return 0;
+
+    // Caso em que o noh da raiz eh folha: ha apenas 1 noh
+    if((*raiz)->ehFolha)
+        return 1;
+
+    // Caso contrario, percorre todos os seus filhos
+    int aux = 0;
+    ArvB* auxB = arvB_cria();
+
+    for(int i = 0; i <= (*raiz)->nChaves; i++)
+    {
+        *auxB = (*raiz)->filhos[i];
+        aux = aux + arvB_qtd_nos(auxB);
+    }
+       
+    return (1 + aux);
+}
+
+// Busca um valor em uma arvore B, retornando 1 (TRUE)
+// caso seja encontrado e 0 (FALSE) caso contrario
+int arvB_busca(ArvB* raiz, int valor)
+{
+    // Se o noh raiz for vazio, retorna FALSE
+    if((*raiz) == NULL)
+        return FALSE;
+
+    // Encontra a posicao do filho onde a chave esta localizada
+    int i = 0;
+    while(i < (*raiz)->nChaves && valor > (*raiz)->chaves[i])
+        i++;
+
+    // Se o valor buscado for igual a valor armazenado na posicao i,
+    // retorna TRUE
+    if(valor == (*raiz)->chaves[i])
+        return TRUE;
+
+    // Se o node analisado for folha, entao nao ha mais como descer. Nesse
+    // caso, a chave buscada nao existe ou esta nesse noh.
+    if((*raiz)->ehFolha)
+    {
+        for(int j = 0; j < (*raiz)->nChaves; j++)
+        {
+            if(valor == (*raiz)->chaves[j])
+                return TRUE;
+        }
+        return FALSE;
+    }
+
+    // Chama recursivamente a busca, explorando os filhos
+    ArvB* aux = arvB_cria();
+    *aux = (*raiz)->filhos[i];
+
+    return arvB_busca(aux, valor);
+}
+
+// Insere um valor dado o ponteiro para a raiz de uma arvore B.
+// Retorna TRUE (1) caso a operacao tenha sucesso e FALSE (0)
+// caso contrario.
 int arvB_insere(ArvB *raiz, int valor) 
 {
-    int flag;
+    // Caso em que a chave a ser inserida ja esta na arvore
+    if(arvB_busca(raiz, valor))
+        return FALSE;
 
     // Caso em que a raiz esta cheia
     if((*raiz)->nChaves == ORDEM - 1)
     {
-        printf("BRUH4");
-        ArvB* novaRaiz = (ArvB*) malloc(sizeof(NO));
+        ArvB* novaRaiz = arvB_cria();
         (*novaRaiz)->ehFolha = FALSE;
-        (*novaRaiz)->filhos[0] = raiz;
+        (*novaRaiz)->filhos[0] = *raiz;
 
-        arvB_split(novaRaiz, 0, raiz);
-        flag = arvB_insere_nao_cheia(novaRaiz, valor);
+        // Eh feito o split do noh
+        arvB_split(*novaRaiz, 0);
+        *raiz = *novaRaiz;
+        // E a chave a ser inserida eh inserida na nova raiz
+        arvB_insere_nao_cheia(*novaRaiz, valor);
     }
+    // Caso em que a raiz nao esta cheia
     else
-        flag = arvB_insere_nao_cheia(raiz, valor);
-    return flag;
+        arvB_insere_nao_cheia(*raiz, valor);
+
+    // Retorna a flag
+    return TRUE;
 }
 
-int arvB_insere_nao_cheia(ArvB* raiz, int valor)
+// Funcao auxiliar para a insercao de chaves em nohs nao cheios
+void arvB_insere_nao_cheia(ArvB raiz, int valor)
 {
-    int i = (*raiz)->nChaves - 1;
-    // Caso em que o noh eh folha
-    if((*raiz)->ehFolha)
-    {
-        while(i >= 0 && valor < (*raiz)->chaves[i])
-        {
-            if((*raiz)->chaves[i] == valor)
-                return FALSE;
+    int i = raiz->nChaves - 1;
 
-            (*raiz)->chaves[i + 1] = (*raiz)->chaves[i];
+    // Caso em que o noh eh folha
+    if(raiz->ehFolha)
+    {
+        while(i >= 0 && valor < raiz->chaves[i])
+        {
+            raiz->chaves[i + 1] = raiz->chaves[i];
             i--;
         }
-        (*raiz)->chaves[i] = valor;
-        (*raiz)->nChaves++;
+        raiz->chaves[i + 1] = valor;
+        raiz->nChaves++;
     }
     // Caso em que o noh nao eh folha
     else
     {
-        printf("BRUH1");
-        while(i >= 0 && valor < (*raiz)->chaves[i])
+        while(i >= 0 && valor < raiz->chaves[i])
             i--;
 
         i++;
-        ArvB* aux = (*raiz)->filhos[i];
 
         // Caso em que o noh a ser inserido esta cheio
-        if((*aux)->nChaves == ORDEM - 1)
+        if(raiz->filhos[i]->nChaves == ORDEM - 1)
         {
-            printf("BRUH2");
-            arvB_split(raiz, i, aux);
+            arvB_split(raiz, i);
+
+            if(valor > raiz->chaves[i])
+                i++;
         }
-
-        if(valor > (*raiz)->chaves[i])
-            i++;
         
-        arvB_insere_nao_cheia(aux, valor);
+        // Executa a funcao recursivamente, ate encontrar um noh nao cheio
+        arvB_insere_nao_cheia(raiz->filhos[i], valor);
     }
-
-    return TRUE;
 }
 
-void arvB_split(ArvB* pai, int indice, ArvB* filho)
+// Particiona um noh, dado o noh pai, e o indice do no filho
+void arvB_split(ArvB pai, int indice)
 {
-    printf("BRUH");
-    ArvB* aux = arvB_cria();
-    (*aux)->ehFolha = (*filho)->ehFolha;
+    // Media onde havera o particionamento
+    int media = (ORDEM / 2) - 1;
 
-    int media = ((ORDEM - 1) / 2);
-    (*aux)->nChaves = media;
+    // Determinacao do filho
+    ArvB filho = pai->filhos[indice];
+    ArvB* novoFilho = arvB_cria();
 
-    // Copiando as chaves do filho da direita
+    (*novoFilho)->ehFolha = filho->ehFolha;
+    (*novoFilho)->nChaves = media;
+
+    // Copia a metade direita do filho para o novo filho
     for(int i = 0; i < media; i++)
-        (*aux)->chaves[i] =  (*filho)->chaves[i + media];
+        (*novoFilho)->chaves[i] = filho->chaves[i + ORDEM / 2];
 
-    // Copiando os ponteiros do filho se o filho nao
-    // eh uma raiz
-    if(!(*filho)->ehFolha)
+    // Copiando os ponteiros de filhos, caso o filho 
+    // nao seja um noh folha
+    if(!(filho->ehFolha))
     {
-        for(int i = 0; i < media; i++)
-            (*aux)->filhos[i] = (*filho)->filhos[i + media];
+        for(int i = 0; i < ORDEM / 2; i++)
+            (*novoFilho)->filhos[i] = filho->filhos[i + ORDEM / 2];
     }
 
-    (*filho)->nChaves = (*filho)->nChaves - media;
+    // Agora, o filho possui uma quantidade de chaves igual a media
+    filho->nChaves = media;
 
-    for(int j = (*pai)->nChaves; j > indice; j--)
-        (*pai)->chaves[j + 1] = (*pai)->chaves[j];
+    // Deslocamento para a direita dos filhos do noh pai
+    for(int i = pai->nChaves; i >= indice + 1; i--)
+        pai->filhos[i + 1] = pai->filhos[i];
 
-    (*pai)->chaves[indice] = (*filho)->chaves[media];
-    (*pai)->nChaves++;
-}
+    // Insercao do filho na posicao correta
+    pai->filhos[indice + 1] = *novoFilho;
 
-int main()
-{
-    ArvB* p = (ArvB*) malloc(sizeof(NO));
-    (*p)->ehFolha = TRUE;
-    (*p)->nChaves = 0;
-    for(int i = 0; i < 10; i++)
-        arvB_insere(p, i) ? printf("%d SUCESSO\n", i) : printf("PFVDESUCESSO");
+    // Promocao de chave
+    for(int i = pai->nChaves - 1; i >= indice; i--)
+        pai->chaves[i + 1] = pai->chaves[i];
 
-    printf("CONTA NOS: %d\n", arvB_qtd_nos(p));
-    printf("CONTA CHAVES: %d\n", arvB_qtd_chaves(p));
-    arvB_destroi(p);
-    printf("BRUH");
-    return 0;
+    pai->chaves[indice] = filho->chaves[media];
+    pai->nChaves++;
 }

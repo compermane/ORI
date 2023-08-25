@@ -10,10 +10,10 @@ typedef struct NO* ArvB;
 struct NO
 {
     int chaves[ORDEM - 1];
-    ArvB* filhos[ORDEM];
+    ArvB filhos[ORDEM];
     int nChaves;
     int ehFolha;
-} NO;
+};
 
 ArvB* arvB_cria();
 void arvB_destroi(ArvB *raiz);
