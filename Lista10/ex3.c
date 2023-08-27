@@ -22,30 +22,34 @@ char* getNome(char fileName[], int index)
     return nome;
 }
 
-void match(char fileNameA[], char fileNameB[])
+void merge(char* fileNameA, char* fileNameB)
 {
     FILE* A = fopen(fileNameA, "r");
     FILE* B = fopen(fileNameB, "r");
-    FILE* res = fopen("result.txt", "w");
+    FILE* res = fopen("resultMerge.txt", "w");
 
     char* nomeA = (char*) malloc(NAME_MAX_LENGHT * sizeof(char));
     char* nomeB = (char*) malloc(NAME_MAX_LENGHT * sizeof(char));
-    int a = 0, b = 0;
+
+    int a = 0;
+    int b = 0;
 
     nomeA = getNome(fileNameA, a);
     nomeB = getNome(fileNameB, b);
 
-    while(nomeA != NULL && nomeB != NULL)
+    while(nomeA != NULL || nomeB != NULL)
     {
-        if(strcmp(nomeA, nomeB) < 0)
+        if(nomeA == NULL || strcmp(nomeA, nomeB) > 0)
         {
-            a++;
-            nomeA = getNome(fileNameA, a);
-        }
-        else if(strcmp(nomeA, nomeB) > 0)
-        {
+            fprintf(res, "%s", nomeB);
             b++;
             nomeB = getNome(fileNameB, b);
+        }
+        else if(nomeB == NULL || strcmp(nomeA, nomeB) < 0)
+        {
+            fprintf(res, "%s", nomeA);
+            a++;
+            nomeA = getNome(fileNameA, a);
         }
         else
         {
@@ -69,6 +73,7 @@ void match(char fileNameA[], char fileNameB[])
 
 int main()
 {
-    match("nomesA.txt", "nomesB.txt");
+    merge("nomesA.txt", "nomesB.txt");
+
     return 0;
 }
